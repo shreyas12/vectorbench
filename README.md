@@ -49,8 +49,8 @@ vectorbench run examples/scifact-small.yaml
 python scripts/build_wiki_50k.py           # → examples/data/wiki-50k/ (git-ignored, ~28MB)
 vectorbench run examples/wiki-50k-local.yaml
 
-# 4. Real 50-100K corpus, downloaded once and cached — the shippable flagship.
-#    (Dataset URL is a placeholder pending a release asset; see "Project status" below.)
+# 4. The same real 50K corpus, downloaded from a checksum-pinned release asset and
+#    cached — the shippable flagship; needs no local build step.
 vectorbench run examples/benchmark-50k.yaml
 ```
 
@@ -73,7 +73,7 @@ The last line the CLI prints is the path to the Experiment Report.
 | `quickstart.yaml` | Synthetic random vectors | 10K vecs / 500 queries | Generated locally | Smoke test, CI. ~30s single-threaded, zero network. |
 | `scifact-small.yaml` | SciFact abstracts (real) | 5,183 docs / 300 queries | Bundled in repo (CC BY-SA 4.0) | Fast real-embedding run, fully offline. |
 | `wiki-50k-local.yaml` | Simple English Wikipedia (real) | 50,000 docs / 200 queries | Built locally by `scripts/build_wiki_50k.py` (CC BY-SA 4.0) | First real Flat-vs-HNSW gap at scale. Corpus is git-ignored (local-only). |
-| `benchmark-50k.yaml` | Real corpus | 50–100K docs / 300+ queries | Downloaded on first run, checksum-verified, cached | The shippable flagship. **URL/sha256 are placeholders** — see Project status. |
+| `benchmark-50k.yaml` | Simple English Wikipedia (real) | 50,000 docs / 200 queries | Downloaded from a checksum-pinned GitHub release asset (`data-v1`), cached | The shippable flagship — same corpus as `wiki-50k-local`, no local build step. |
 
 ## Results — 50K Wikipedia (real `bge-small` embeddings)
 
@@ -121,23 +121,18 @@ the variance you see reflects HNSW's genuine sensitivity to insertion order — 
 
 **Working today (v0.1, validated):**
 - Flat-vs-HNSW experiment type, end-to-end: config → embed → build → sweep → report.
-- Three real/synthetic corpora wired and validated (see table): synthetic 10K, SciFact 5K,
-  Wikipedia 50K (local).
+- Four corpora wired and validated (see table): synthetic 10K, SciFact 5K, Wikipedia 50K
+  (local build **and** as a downloadable checksum-pinned release asset).
 - Self-contained HTML report, `results.json` (schema v1), content-aware hashing, run folders.
 - 39 tests (`pytest`, <1s, no network); CI on Ubuntu + macOS.
 
 **In progress / good pickups for other devs** (roughly ordered by effort):
 
-1. **Ship the flagship dataset.** `benchmark-50k.yaml` has placeholder `url`/`sha256`
-   (all zeros — it fails the checksum by design until pinned). The local Wikipedia corpus
-   built by `scripts/build_wiki_50k.py` is the ready candidate: upload it as a GitHub
-   release asset, then wire the real URL + SHA256 into the config. *Blocked on:* the repo
-   needs its first commit and a push before a release asset can exist.
-2. **Scale the corpus to 250K–1M docs** for a dramatic latency gap. Simple English
+1. **Scale the corpus to 250K–1M docs** for a dramatic latency gap. Simple English
    Wikipedia caps at ~240K articles; full English Wikipedia has millions.
    `scripts/build_wiki_50k.py` generalizes — bump `N_DOCS` and point at the full dump.
    This is what turns the "12× speedup" story into a "100×+" one (see Known limitations).
-3. **Tune the HNSW build** (higher `M` / `ef_construction`) to push the recall ceiling past
+2. **Tune the HNSW build** (higher `M` / `ef_construction`) to push the recall ceiling past
    the current 0.989 at ef=512.
 4. **Experiment Registry:** `list` / `compare` / `export` across runs. Every run folder
    already records its `experiment_type`, so the registry can be type-aware from day one.
@@ -149,9 +144,9 @@ the variance you see reflects HNSW's genuine sensitivity to insertion order — 
 
 - **50K is small for HNSW.** The exact-search baseline (4.39 ms) is fast enough that the
   absolute latency win is imperceptible; HNSW's advantage grows with corpus size. Fix =
-  pickup #2 above.
+  pickup #1 above.
 - **Recall tops out at 0.989** (ef=512) with the current build config — there's headroom
-  via pickup #3.
+  via pickup #2.
 - **`scripts/build_wiki_50k.py`** streams from the HF Hub and prints a benign
   `PyGILState` error at interpreter teardown *after* all files are written — the corpus is
   complete; ignore it. (Contributions to silence it cleanly welcome.)

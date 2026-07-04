@@ -1,0 +1,32 @@
+# wiki-50k-local — 50,000 real Simple English Wikipedia docs (CC BY-SA 4.0), embedded
+# with bge-small. Local-only sibling of benchmark-50k.yaml: same shape, but reads the
+# corpus from disk (built by scripts/build_wiki_50k.py) instead of a pinned release asset.
+# Purpose: a first look at a visible Flat-vs-HNSW latency gap on real semantics at 50K scale.
+name: wiki_50k_local
+
+dataset:
+  corpus: examples/data/wiki-50k/corpus.jsonl
+  queries: examples/data/wiki-50k/queries.jsonl
+
+embedding:
+  model: BAAI/bge-small-en-v1.5
+
+similarity: cosine
+
+index:
+  flat: true
+  hnsw:
+    M: 32
+    ef_construction: 200
+    ef_search: [16, 32, 64, 128, 256, 512]
+
+evaluation:
+  k: 10
+  warmup_queries: 5
+  min_queries: 200
+  repetitions: 3
+
+output:
+  dir: runs/
+
+seed: 42

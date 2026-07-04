@@ -1,0 +1,14 @@
+runs/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.egg-info/
+build/
+dist/
+# local index/embedding artifacts
+*.faiss
+*.npy
+# local-only large benchmark corpus (not committed)
+examples/data/wiki-50k/
+scripts/__pycache__/

@@ -1,0 +1,39 @@
+# benchmark-50k — real 50-100K-doc corpus, downloaded on first run and cached. This is
+# the config behind the flagship Pareto chart: a visible Flat-vs-HNSW latency gap on real
+# semantics.
+#
+# ⚠ The url/sha256 fields below are PLACEHOLDERS. They are pinned by ticket T0 (dataset
+# licence verification + hosting) before v0.1.0 ships. Until then this config will fail the
+# checksum check by design — use scifact-small.yaml for a fully offline real-embedding run.
+name: benchmark_50k
+
+dataset:
+  remote:
+    name: benchmark-50k
+    url: https://github.com/OWNER/vectorbench/releases/download/data-v1/corpus.jsonl.gz
+    sha256: 0000000000000000000000000000000000000000000000000000000000000000
+    queries_url: https://github.com/OWNER/vectorbench/releases/download/data-v1/queries.jsonl.gz
+    queries_sha256: 0000000000000000000000000000000000000000000000000000000000000000
+
+embedding:
+  model: BAAI/bge-small-en-v1.5
+
+similarity: cosine
+
+index:
+  flat: true
+  hnsw:
+    M: 32
+    ef_construction: 200
+    ef_search: [16, 32, 64, 128, 256, 512]
+
+evaluation:
+  k: 10
+  warmup_queries: 5
+  min_queries: 200
+  repetitions: 3
+
+output:
+  dir: runs/
+
+seed: 42

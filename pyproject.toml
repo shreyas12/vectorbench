@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vectorbench"
+version = "0.1.0"
+description = "Design, run, compare, and visualize retrieval experiments on your own data."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Shreyas" }]
+dependencies = [
+    "typer>=0.12",
+    "pydantic>=2",
+    "pyyaml>=6",
+    "sentence-transformers>=2.2",
+    "faiss-cpu>=1.7",
+    "numpy>=1.24",
+    "plotly>=5.18",
+    "jinja2>=3.1",
+    "psutil>=5.9",
+    "requests>=2.31",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+vectorbench = "vectorbench.cli:app"
+
+[tool.setuptools]
+packages = ["vectorbench"]
+
+[tool.setuptools.package-data]
+vectorbench = ["templates/*.j2"]

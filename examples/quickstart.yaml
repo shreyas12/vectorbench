@@ -1,0 +1,40 @@
+# Quickstart — synthetic vectors. Role: smoke test / CI. Zero network, <60s single-threaded.
+# Semantics are MEANINGLESS: random normal vectors are near-equidistant, so nearest
+# neighbours are essentially arbitrary. Use this to check the pipeline, not to draw
+# conclusions. For a real-embedding run, use scifact-small.yaml.
+#
+# Sized at 10K (not 50K) on purpose: HNSW builds single-threaded here (for reproducibility),
+# and near-equidistant random vectors are HNSW's worst case for build cost — 50K synthetic
+# takes ~5 min, blowing the CI-smoke budget. 10K keeps a full multi-point Pareto with an
+# obvious knee in well under a minute. The scale is cosmetic anyway (the vectors are noise).
+name: quickstart_synthetic
+
+dataset:
+  synthetic:
+    n_docs: 10000
+    n_queries: 500
+    dim: 384
+
+embedding:
+  model: BAAI/bge-small-en-v1.5   # unused for synthetic (vectors are generated directly)
+
+similarity: cosine
+
+index:
+  flat: true
+  hnsw:
+    M: 32
+    ef_construction: 200
+    ef_search: [16, 32, 64, 128, 256]
+
+evaluation:
+  k: 10
+  warmup_queries: 5
+  min_queries: 200
+  repetitions: 3
+
+output:
+  dir: runs/
+  report_name: experiment_report.html
+
+seed: 42

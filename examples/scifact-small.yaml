@@ -1,0 +1,32 @@
+# scifact-small — bundled SciFact corpus (5,183 real scientific abstracts + 300 test
+# claims as queries; CC BY-SA 4.0, see examples/data/small/README.md). Role: fast
+# real-embedding run, fully offline. Latency spread is small at this scale (a few thousand
+# docs) — that is expected; use benchmark-50k.yaml for a visible Flat-vs-HNSW gap.
+name: scifact_small
+
+dataset:
+  corpus: examples/data/small/corpus.jsonl
+  queries: examples/data/small/queries.jsonl
+
+embedding:
+  model: BAAI/bge-small-en-v1.5
+
+similarity: cosine
+
+index:
+  flat: true
+  hnsw:
+    M: 32
+    ef_construction: 200
+    ef_search: [16, 32, 64, 128, 256]
+
+evaluation:
+  k: 10
+  warmup_queries: 5
+  min_queries: 200
+  repetitions: 3
+
+output:
+  dir: runs/
+
+seed: 42

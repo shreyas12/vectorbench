@@ -74,6 +74,7 @@ The last line the CLI prints is the path to the Experiment Report.
 | `scifact-small.yaml` | SciFact abstracts (real) | 5,183 docs / 300 queries | Bundled in repo (CC BY-SA 4.0) | Fast real-embedding run, fully offline. |
 | `wiki-50k-local.yaml` | Simple English Wikipedia (real) | 50,000 docs / 200 queries | Built locally by `scripts/build_wiki_50k.py` (CC BY-SA 4.0) | First real Flat-vs-HNSW gap at scale. Corpus is git-ignored (local-only). |
 | `benchmark-50k.yaml` | Simple English Wikipedia (real) | 50,000 docs / 200 queries | Downloaded from a checksum-pinned GitHub release asset (`data-v1`), cached | The shippable flagship — same corpus as `wiki-50k-local`, no local build step. |
+| `wiki-50k-highrecall.yaml` | Simple English Wikipedia (real) | 50,000 docs / 200 queries | Reuses the local `wiki-50k` corpus | Stronger HNSW build (M=64, efc=500) — the high-recall end of the trade-off. |
 
 ## Results — 50K Wikipedia (real `bge-small` embeddings)
 
@@ -105,6 +106,29 @@ curve is signal, not measurement noise.
 *shape* of the trade-off convincingly; it does not yet showcase HNSW at the scale where it
 matters most.
 
+## Tuning the HNSW build
+
+Recall isn't only a function of `efSearch` at query time — it's capped by the *graph* built
+at index time (`M`, `ef_construction`). The default flagship build (M=32, efc=200) tops out
+at **0.989** recall; `wiki-50k-highrecall.yaml` rebuilds the same corpus with a denser graph
+(**M=64, efc=500**) and lifts recall at every operating point:
+
+| efSearch | recall (M=32, efc=200) | recall (M=64, efc=500) |
+|---:|:--:|:--:|
+| 64   | 0.917 | 0.951 |
+| 128  | 0.950 | 0.977 |
+| 256  | 0.975 | **0.992** |
+| 512  | 0.989 | **0.997** |
+| 1024 | —     | **0.998** |
+
+It's a genuine trade-off, not a free win: the denser build costs ~2.5× the build time
+(32 s → 82 s/rep), a larger index (86 MB → 98 MB), and higher per-query latency at a given
+`efSearch`. So on the recall-vs-latency frontier the **denser build wins at the high-recall
+end** (it reaches the 0.99+ tier the light build can't hit at *any* ef — e.g. 0.992 @ 1.13 ms
+vs the light build's 0.989 @ 1.20 ms), while the **lighter build wins at the low-latency
+end**. Bigger `M` buys a higher recall ceiling at the cost of speed and memory — pick per
+your recall target.
+
 ## What you get
 
 - **Recall@k (vs exact search)** with across-repetition error bars.
@@ -121,8 +145,10 @@ the variance you see reflects HNSW's genuine sensitivity to insertion order — 
 
 **Working today (v0.1, validated):**
 - Flat-vs-HNSW experiment type, end-to-end: config → embed → build → sweep → report.
-- Four corpora wired and validated (see table): synthetic 10K, SciFact 5K, Wikipedia 50K
-  (local build **and** as a downloadable checksum-pinned release asset).
+- Five configs wired and validated (see table): synthetic 10K, SciFact 5K, Wikipedia 50K
+  (local build **and** as a downloadable checksum-pinned release asset), plus a
+  high-recall build variant.
+- Build-quality trade-off demonstrated (`M` / `ef_construction`) — see "Tuning the HNSW build".
 - Self-contained HTML report, `results.json` (schema v1), content-aware hashing, run folders.
 - 39 tests (`pytest`, <1s, no network); CI on Ubuntu + macOS.
 
@@ -132,11 +158,9 @@ the variance you see reflects HNSW's genuine sensitivity to insertion order — 
    Wikipedia caps at ~240K articles; full English Wikipedia has millions.
    `scripts/build_wiki_50k.py` generalizes — bump `N_DOCS` and point at the full dump.
    This is what turns the "12× speedup" story into a "100×+" one (see Known limitations).
-2. **Tune the HNSW build** (higher `M` / `ef_construction`) to push the recall ceiling past
-   the current 0.989 at ef=512.
-4. **Experiment Registry:** `list` / `compare` / `export` across runs. Every run folder
+2. **Experiment Registry:** `list` / `compare` / `export` across runs. Every run folder
    already records its `experiment_type`, so the registry can be type-aware from day one.
-5. **New experiment types** on the same engine + run-folder format: embedding comparison,
+3. **New experiment types** on the same engine + run-folder format: embedding comparison,
    vector-DB comparison, chunking, hybrid search, RAG evaluation. See
    [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -145,8 +169,9 @@ the variance you see reflects HNSW's genuine sensitivity to insertion order — 
 - **50K is small for HNSW.** The exact-search baseline (4.39 ms) is fast enough that the
   absolute latency win is imperceptible; HNSW's advantage grows with corpus size. Fix =
   pickup #1 above.
-- **Recall tops out at 0.989** (ef=512) with the current build config — there's headroom
-  via pickup #2.
+- **The default build tops out at 0.989 recall** (ef=512). This is a build-quality ceiling,
+  not a hard limit — `wiki-50k-highrecall.yaml` (M=64, efc=500) reaches 0.998; see
+  "Tuning the HNSW build" for the trade-off.
 - **`scripts/build_wiki_50k.py`** streams from the HF Hub and prints a benign
   `PyGILState` error at interpreter teardown *after* all files are written — the corpus is
   complete; ignore it. (Contributions to silence it cleanly welcome.)

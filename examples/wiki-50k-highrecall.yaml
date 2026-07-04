@@ -1,0 +1,35 @@
+# wiki-50k-highrecall — the SAME 50K Wikipedia corpus as wiki-50k-local, but with a
+# stronger HNSW build (M=64, ef_construction=500) and the sweep extended to ef=1024.
+#
+# Purpose: show the build-quality trade-off. A denser graph reaches recall levels the
+# default M=32/ef_construction=200 build cannot hit at any ef — the ceiling moves from
+# ~0.989 to ~0.998 — at the cost of ~2.5x build time, a larger index, and higher per-query
+# latency at a given ef. See the "Tuning the HNSW build" section of the README.
+name: wiki_50k_highrecall
+
+dataset:
+  corpus: examples/data/wiki-50k/corpus.jsonl
+  queries: examples/data/wiki-50k/queries.jsonl
+
+embedding:
+  model: BAAI/bge-small-en-v1.5
+
+similarity: cosine
+
+index:
+  flat: true
+  hnsw:
+    M: 64
+    ef_construction: 500
+    ef_search: [16, 32, 64, 128, 256, 512, 1024]
+
+evaluation:
+  k: 10
+  warmup_queries: 5
+  min_queries: 200
+  repetitions: 3
+
+output:
+  dir: runs/
+
+seed: 42
